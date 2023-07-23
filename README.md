@@ -17,25 +17,81 @@ This repository contains a collection of Splunk's Search Processing Language (SP
 
 ## List of SPL Queries
 
-1. **Detecting Suspicious PowerShell Execution**: Identify processes where PowerShell is executed with specific command-line parameters.
+1. **Detecting Suspicious PowerShell Execution**:
 
-2. **Identifying PowerShell Downloads**: Detect PowerShell commands involving the "Invoke-WebRequest" cmdlet.
+```spl
+index=your_crowdstrike_falcon_data sourcetype="crowdstrike:json" event_type="process" process_name="powershell.exe"
+| search (process_cmdline="*-EncodedCommand *" OR process_cmdline="*-Command *" OR process_cmdline="*-c *")
+```
 
-3. **PowerShell Scripts from URLs**: Find PowerShell commands with URLs in the command-line.
+2. **Identifying PowerShell Downloads**:
 
-4. **PowerShell Script Block Logging**: Investigate PowerShell scripts along with their script blocks, considering parent processes.
+```spl
+index=your_crowdstrike_falcon_data sourcetype="crowdstrike:json" event_type="process" process_name="powershell.exe"
+| search process_cmdline="*Invoke-WebRequest*"
+```
 
-5. **Detecting Base64 Encoded PowerShell Commands**: Identify PowerShell commands with Base64-encoded command parameters.
+3. **PowerShell Scripts from URLs**:
 
-6. **PowerShell Scriptblock without Bypass**: Detect PowerShell commands run without bypassing execution policy.
+```spl
+index=your_crowdstrike_falcon_data sourcetype="crowdstrike:json" event_type="process" process_name="powershell.exe"
+| search process_cmdline="*http*"
+```
 
-7. **Identifying PowerShell Downloads with Suspicious User-Agent**: Identify suspicious PowerShell downloads with non-standard User-Agent.
+4. **PowerShell Script Block Logging**:
 
-8. **PowerShell Process Started from Unusual Locations**: Detect PowerShell processes started from locations other than the default path.
+```spl
+index=your_crowdstrike_falcon_data sourcetype="crowdstrike:json" event_type="process" process_name="powershell.exe"
+| search process_cmdline="*-EncodedCommand *" OR process_cmdline="*-Command *" OR process_cmdline="*-c *"
+| eval script_block=if(isnull(process_parent_path) OR isnull(process_parent_cmdline), process_cmdline, mvzip(process_parent_path, process_parent_cmdline))
+| table process_name, process_cmdline, script_block
+```
 
-9. **Identifying PowerShell Empire Activity**: Identify potential PowerShell Empire activity based on command-line patterns.
+5. **Detecting Base64 Encoded PowerShell Commands**:
 
-10. **Detecting PowerShell Obfuscated Scripts**: Find PowerShell commands that include obfuscated code.
+```spl
+index=your_crowdstrike_falcon_data sourcetype="crowdstrike:json" event_type="process" process_name="powershell.exe"
+| search process_cmdline="*powershell*"
+| regex process_cmdline="powershell\s+-(?:Enc|C)odedCommand"
+```
+
+6. **PowerShell Scriptblock without Bypass**:
+
+```spl
+index=your_crowdstrike_falcon_data sourcetype="crowdstrike:json" event_type="process" process_name="powershell.exe"
+| search process_cmdline="*powershell*"
+| regex process_cmdline="powershell\s+-NoP\s+-NonI\s+-W Hidden\s+-Exec\sBypass"
+```
+
+7. **Identifying PowerShell Downloads with Suspicious User-Agent**:
+
+```spl
+index=your_crowdstrike_falcon_data sourcetype="crowdstrike:json" event_type="process" process_name="powershell.exe"
+| search process_cmdline="*Invoke-WebRequest*"
+| search process_cmdline="*UserAgent*"
+| search NOT process_cmdline="*UserAgent \"Mozilla*"
+```
+
+8. **PowerShell Process Started from Unusual Locations**:
+
+```spl
+index=your_crowdstrike_falcon_data sourcetype="crowdstrike:json" event_type="process" process_name="powershell.exe"
+| search NOT process_path="C:\\Windows\\System32\\powershell.exe"
+```
+
+9. **Identifying PowerShell Empire Activity**:
+
+```spl
+index=your_crowdstrike_falcon_data sourcetype="crowdstrike:json" event_type="process"
+| search process_name="powershell.exe" AND process_cmdline="*iex (New-Object*"
+```
+
+10. **Detecting PowerShell Obfuscated Scripts**:
+
+```spl
+index=your_crowdstrike_falcon_data sourcetype="crowdstrike:json" event_type="process" process_name="powershell.exe"
+| search process_cmdline="*powershell*" AND process_cmdline="*-e*"
+```
 
 ## Contributions
 
